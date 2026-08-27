@@ -166,7 +166,7 @@ function App() {
 
       <header className="app-header">
         <div className="header-content">
-          <img src="/ChatGPT Image 30 juil. 2026, 18_57_08.png" alt="Sourcia Logo" className="logo" />
+          <img src="/logo.png" alt="Sourcia Logo" className="logo" />
           <h1>Sourcia</h1>
         </div>
         <p className="tagline">Veille média intelligente pour les journalistes</p>

@@ -7,4 +7,4 @@ dist/
 .DS_Store
 deno.lock
 package-lock.json
-public/ChatGPT Image 30 juil. 2026, 18_57_08.png
+# public/logo.png # keep logo in repo if small, otherwise ignore
