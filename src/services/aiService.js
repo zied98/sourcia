@@ -3,8 +3,6 @@
  * Generates summaries and digests using OpenRouter API
  */
 
-const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || import.meta.env.OPENROUTER_API_KEY
-
 export async function generateSummary(text, maxLength = 150) {
   console.log('[AI Service] Generating summary via Netlify Function')
 

@@ -52,6 +52,7 @@ exports.handler = async (event, context) => {
 
   const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
   if (!OPENROUTER_API_KEY) {
+    console.error('Missing OPENROUTER_API_KEY');
     return {
       statusCode: 500,
       headers: {
@@ -59,51 +60,54 @@ exports.handler = async (event, context) => {
         'Access-Control-Allow-Origin': '*',
       },
       body: JSON.stringify({
-        error: 'OpenRouter API key not configured. Set OPENROUTER_API_KEY in Netlify environment variables.',
+        error: 'OpenRouter API key not configured.',
+        details: 'Check your Netlify environment variables for OPENROUTER_API_KEY',
       }),
     }
   }
 
   try {
+    console.log('Calling OpenRouter for text length:', text.length);
     // Call OpenRouter API
     const response = await fetch(`${OPENROUTER_API_BASE}/chat/completions`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Authorization': `Bearer ${OPENROUTER_API_KEY.trim()}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://sourcia.netlify.app',
-        'X-Form-From': 'sourcia',
+        'X-Title': 'Sourcia MVP',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4o-mini', // Fast and efficient for summarization
+        model: 'google/gemini-2.0-flash-lite-preview-02-05:free',
         messages: [
           {
             role: 'system',
-            content: 'You are a concise and helpful AI assistant that summarizes content for journalists and researchers. Keep summaries under 150 words and focus on key facts, insights, and context.',
+            content: 'Tu es un assistant IA concis qui résume du contenu pour des journalistes. Tes résumés doivent être en français, factuels et structurés.',
           },
           {
             role: 'user',
-            content: `Please provide a concise summary (max ${maxLength} words) of the following text:\n\n${text}`,
+            content: `Résume ce texte en français (max ${maxLength} caractères) :\n\n${text}`,
           },
         ],
-        max_tokens: Math.min(maxLength * 2, 400), // Rough estimate: 4 chars per token
-        temperature: 0.3, // Low temperature for more deterministic output
+        max_tokens: 500,
+        temperature: 0.3,
       }),
     })
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(
-        `OpenRouter API error: ${response.status} ${errorData.error?.message || response.statusText}`
-      )
+      const errorText = await response.text();
+      console.error('OpenRouter API Error:', response.status, errorText);
+      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json()
     const summary = data.choices?.[0]?.message?.content?.trim()
 
     if (!summary) {
-      throw new Error('No summary returned from OpenRouter')
+      throw new Error('No summary returned from OpenRouter choices');
     }
+
+    console.log('Summary generated successfully');
 
     return {
       statusCode: 200,
