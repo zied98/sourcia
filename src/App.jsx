@@ -39,8 +39,10 @@ function EngagementBar({ engagement }) {
 function App() {
   const { sources, addSource, removeSource } = useSources()
   const [feedItems, setFeedItems] = useState([])
+  const [globalDigest, setGlobalDigest] = useState(null)
   const [isExtracting, setIsExtracting] = useState(false)
   const [isSummarizing, setIsSummarizing] = useState(false)
+  const [isDigestLoading, setIsDigestLoading] = useState(false)
   const [error, setError] = useState(null)
 
   const handleAddSource = (source) => {
@@ -55,6 +57,7 @@ function App() {
 
     // Clear previous feed before generating new one
     setFeedItems([])
+    setGlobalDigest(null)
     setIsExtracting(true)
     setError(null)
 
@@ -105,6 +108,7 @@ function App() {
       // Generate AI summaries for extracted items
       if (extractedItems.length > 0) {
         await generateSummaries(extractedItems)
+        await generateFinalDigest(extractedItems)
       }
     } catch (err) {
       setError('Failed to generate feed. Please try again.')
@@ -151,6 +155,24 @@ function App() {
       console.error('Summary generation error:', err)
     } finally {
       setIsSummarizing(false)
+    }
+  }
+
+  const generateFinalDigest = async (items) => {
+    setIsDigestLoading(true)
+    try {
+      const combinedText = items
+        .slice(0, 10) // Limit to top 10 for the global summary
+        .map(item => `${item.sourceName} : ${item.title}. ${item.snippet}`)
+        .join('\n\n')
+      
+      const result = await apiClient.generateSummary(combinedText, 500)
+      setGlobalDigest(result.summary)
+    } catch (err) {
+      console.error('Final digest error:', err)
+      setGlobalDigest('Résumé global indisponible pour le moment.')
+    } finally {
+      setIsDigestLoading(false)
     }
   }
 
@@ -215,6 +237,30 @@ function App() {
 
         {/* Error Message */}
         {error && <div className="error-message">{error}</div>}
+
+        {/* Global AI Digest */}
+        {(globalDigest || isDigestLoading) && (
+          <section className="section global-digest">
+            <div className="digest-card">
+              <div className="digest-header">
+                <span className="digest-icon">🧠</span>
+                <h3>Résumé Global IA</h3>
+              </div>
+              <div className="digest-content">
+                {isDigestLoading ? (
+                  <div className="loading-placeholder">
+                    <div className="pulse-line"></div>
+                    <div className="pulse-line"></div>
+                    <div className="pulse-line"></div>
+                    <p>L'IA analyse votre veille du jour...</p>
+                  </div>
+                ) : (
+                  <p>{globalDigest}</p>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Feed Results */}
         {feedItems.length > 0 && (

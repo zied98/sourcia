@@ -78,18 +78,20 @@ exports.handler = async (event, context) => {
         'X-Title': 'Sourcia MVP',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-lite-preview-02-05:free',
+        model: 'poolside/laguna-xs-2.1:free',
         messages: [
           {
             role: 'system',
-            content: 'Tu es un assistant IA concis qui résume du contenu pour des journalistes. Tes résumés doivent être en français, factuels et structurés.',
+            content: 'Tu es un assistant IA expert en analyse média pour journalistes. Ton rôle est de fournir des résumés factuels, concis et structurés en français.',
           },
           {
             role: 'user',
-            content: `Résume ce texte en français (max ${maxLength} caractères) :\n\n${text}`,
+            content: text.length > 2000 
+              ? `Voici plusieurs articles, fais-en un résumé global synthétique en français (max ${maxLength} caractères) :\n\n${text}`
+              : `Résume ce texte en français (max ${maxLength} caractères) :\n\n${text}`,
           },
         ],
-        max_tokens: 500,
+        max_tokens: 1000,
         temperature: 0.3,
       }),
     })

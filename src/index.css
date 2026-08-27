@@ -910,3 +910,78 @@ body {
 .help-text-demo {
   color: #7c3aed;
 }
+
+/* Global Digest AI Section */
+.global-digest {
+  margin-bottom: 2rem;
+}
+
+.digest-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--color-primary-light);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  transition: var(--transition-slow);
+}
+
+.digest-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl);
+}
+
+.digest-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
+  color: white;
+}
+
+.digest-icon {
+  font-size: 1.5rem;
+}
+
+.digest-header h3 {
+  margin: 0;
+  color: white;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.digest-content {
+  padding: 1.5rem;
+  font-size: var(--font-size-base);
+  line-height: 1.7;
+  color: var(--color-text);
+}
+
+.digest-content p {
+  white-space: pre-line;
+}
+
+/* Loading Animation for Digest */
+.loading-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.pulse-line {
+  height: 12px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+  animation: pulse-loading 1.5s infinite;
+}
+
+.pulse-line:nth-child(2) { width: 90%; animation-delay: 0.2s; }
+.pulse-line:nth-child(3) { width: 75%; animation-delay: 0.4s; }
+
+@keyframes pulse-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
