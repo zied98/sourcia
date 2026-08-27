@@ -2,7 +2,39 @@ import React, { useState } from 'react'
 import { useSources } from './hooks/useSources'
 import { SourceForm } from './components/SourceForm'
 import { SourceList } from './components/SourceList'
+import { PopularSources } from './components/PopularSources'
 import { apiClient } from './utils/api'
+import { getPlatformMeta } from './services/mockData'
+
+// "il y a 42 min", "il y a 3 h", "il y a 2 j"
+function timeAgo(isoDate) {
+  const minutes = Math.max(1, Math.round((Date.now() - new Date(isoDate).getTime()) / 60000))
+  if (minutes < 60) return `il y a ${minutes} min`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `il y a ${hours} h`
+  return `il y a ${Math.round(hours / 24)} j`
+}
+
+// 1240 -> "1 240", 23400 -> "23,4 k"
+function formatCount(n) {
+  if (!n && n !== 0) return ''
+  if (n >= 1000) {
+    const k = n / 1000
+    return `${k.toFixed(1).replace('.', ',').replace(',0', '')} k`
+  }
+  return String(n)
+}
+
+function EngagementBar({ engagement }) {
+  if (!engagement) return null
+  return (
+    <div className="engagement">
+      {engagement.likes != null && <span>♥ {formatCount(engagement.likes)}</span>}
+      {engagement.comments != null && <span>💬 {formatCount(engagement.comments)}</span>}
+      {engagement.reposts != null && <span>🔁 {formatCount(engagement.reposts)}</span>}
+    </div>
+  )
+}
 
 function App() {
   const { sources, addSource, removeSource } = useSources()
@@ -12,26 +44,21 @@ function App() {
   const [error, setError] = useState(null)
 
   const handleAddSource = (source) => {
-    const newSource = {
-      id: Date.now(),
-      ...source,
-      createdAt: new Date().toISOString(),
-    }
-    addSource(newSource)
+    addSource(source)
   }
 
   const handleGenerateFeed = async () => {
     if (sources.length === 0) {
-      setError('Please add at least one source first.')
+      setError('Ajoutez au moins une source avant de générer le flux.')
       return
     }
 
+    // Clear previous feed before generating new one
+    setFeedItems([])
     setIsExtracting(true)
-    setIsSummarizing(false)
     setError(null)
 
     try {
-      // Extract content from each source using Apify
       const extractedItems = []
 
       for (const source of sources) {
@@ -44,17 +71,19 @@ function App() {
                 id: `${source.id}-${index}-${Date.now()}`,
                 sourceId: source.id,
                 sourceName: source.name,
+                sourceType: source.type,
                 title: item.title || `Item from ${source.name}`,
                 snippet: item.text || item.content || item.description || 'No description available',
                 url: item.url || source.url,
                 publishedAt: item.publishedAt || new Date().toISOString(),
-                summary: null, // Will be filled by AI summarization
+                author: item.author || null,
+                engagement: item.engagement || null,
+                summary: null,
               })
             })
           }
         } catch (err) {
           console.error(`Failed to extract from ${source.name}:`, err)
-          // Add a placeholder item for failed extractions
           extractedItems.push({
             id: `${source.id}-placeholder-${Date.now()}`,
             sourceId: source.id,
@@ -93,7 +122,7 @@ function App() {
 
       for (const item of items) {
         // Skip items that already have a summary (failed extractions)
-        if (item.summary && !item.summary.includes('Extracted from')) {
+        if (item.summary && !item.summary.includes('failed')) {
           itemsWithSummaries.push(item)
           continue
         }
@@ -131,30 +160,41 @@ function App() {
 
   return (
     <div className="app">
+      <div className="demo-banner" title="Toutes les données affichées sont simulées pour cette démonstration">
+        <span className="demo-banner-dot"></span> Mode démo — données simulées
+      </div>
+
       <header className="app-header">
-        <h1>Sourcia</h1>
-        <p className="tagline">Media intelligence for journalists</p>
+        <div className="header-content">
+          <img src="/ChatGPT Image 30 juil. 2026, 18_57_08.png" alt="Sourcia Logo" className="logo" />
+          <h1>Sourcia</h1>
+        </div>
+        <p className="tagline">Veille média intelligente pour les journalistes</p>
       </header>
 
       <main className="app-main">
         {/* Hero Section */}
         <section className="hero">
-          <h2>Welcome to Sourcia</h2>
+          <h2>Bienvenue sur Sourcia</h2>
           <p>
-            A lightweight media intelligence tool that helps you monitor multiple
-            sources and receive a daily personalized feed of relevant posts and summaries.
+            Centralisez vos sources — médias, X, LinkedIn, Instagram, YouTube — et recevez
+            un flux personnalisé avec résumés générés par l'IA. Fini de naviguer entre
+            dix plateformes : votre veille quotidienne tient dans un seul fil.
           </p>
         </section>
 
+        {/* Popular Sources Section */}
+        <PopularSources onAdd={handleAddSource} />
+
         {/* Source Input Form */}
         <section className="section">
-          <h3>Add a Source</h3>
+          <h3>Ajouter une source</h3>
           <SourceForm onAdd={handleAddSource} />
         </section>
 
         {/* Sources List */}
         <section className="section">
-          <h3>Your Sources ({sources.length})</h3>
+          <h3>Vos sources ({sources.length})</h3>
           <SourceList sources={sources} onRemove={removeSource} />
         </section>
 
@@ -166,10 +206,10 @@ function App() {
             disabled={isExtracting || isSummarizing || sources.length === 0}
           >
             {isExtracting
-              ? 'Extracting Content...'
+              ? '⏳ Extraction du contenu…'
               : isSummarizing
-                ? 'Generating Summaries...'
-                : 'Generate Feed'}
+                ? '🧠 Génération des résumés…'
+                : '⚡ Générer mon flux'}
           </button>
         </section>
 
@@ -179,26 +219,46 @@ function App() {
         {/* Feed Results */}
         {feedItems.length > 0 && (
           <section className="section">
-            <h3>Feed Results ({feedItems.length} items)</h3>
+            <h3>Votre flux ({feedItems.length} contenus)</h3>
             <div className="feed-list">
-              {feedItems.map((item) => (
-                <div key={item.id} className="feed-item">
-                  <div className="feed-item-header">
-                    <h4>{item.title}</h4>
-                    <span className="feed-item-source">{item.sourceName}</span>
+              {feedItems.map((item) => {
+                const meta = getPlatformMeta(item.sourceType)
+                return (
+                  <div key={item.id} className="feed-item">
+                    <div className="feed-item-header">
+                      <span className={`source-badge ${meta.className}`} title={meta.label}>
+                        {meta.short}
+                      </span>
+                      <h4>{item.title}</h4>
+                      <span className="feed-item-source">{item.sourceName}</span>
+                    </div>
+                    <div className="feed-item-meta">
+                      {item.author && <span className="feed-item-author">{item.author}</span>}
+                      <span className="feed-item-time">{timeAgo(item.publishedAt)}</span>
+                    </div>
+                    <p className="feed-item-snippet">{item.snippet}</p>
+                    <EngagementBar engagement={item.engagement} />
+                    <div className="feed-item-summary">
+                      <strong>IA :</strong> {item.summary || '⏳ génération…'}
+                    </div>
+                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="feed-item-link">
+                      Lire la source complète →
+                    </a>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleRemoveItem(item.id)}>
+                      Retirer
+                    </button>
                   </div>
-                  <p className="feed-item-snippet">{item.snippet}</p>
-                  <div className="feed-item-summary">
-                    <strong>AI Summary:</strong> {item.summary}
-                  </div>
-                  <a href={item.url} target="_blank" rel="noopener noreferrer" className="feed-item-link">
-                    Read full article
-                  </a>
-                  <button className="btn btn-danger btn-sm" onClick={() => handleRemoveItem(item.id)}>
-                    Remove
-                  </button>
-                </div>
-              ))}
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Feed Empty State */}
+        {sources.length > 0 && !isExtracting && !isSummarizing && feedItems.length === 0 && !error && (
+          <section className="section">
+            <div className="empty-state">
+              <p>Ajoutez des sources ci-dessus puis cliquez sur « Générer mon flux » pour voir votre veille du jour.</p>
             </div>
           </section>
         )}

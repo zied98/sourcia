@@ -1,14 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 const STORAGE_KEY = 'sourcia-sources'
 
 export function useSources() {
   const [sources, setSources] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
 
   useEffect(() => {
-    // Load sources from local storage
     const storedSources = localStorage.getItem(STORAGE_KEY)
     if (storedSources) {
       try {
@@ -24,33 +21,48 @@ export function useSources() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSources))
   }
 
-  const addSource = (source) => {
-    const newSources = [...sources, source]
-    setSources(newSources)
-    persistSources(newSources)
-  }
+  const addSource = useCallback((source) => {
+    setSources((prevSources) => {
+      // Check if source already exists (by URL or name)
+      const exists = prevSources.some(
+        (s) => (s.url && s.url === source.url) || (s.name && s.name === source.name)
+      )
 
-  const removeSource = (id) => {
-    const newSources = sources.filter((s) => s.id !== id)
-    setSources(newSources)
-    persistSources(newSources)
-  }
+      if (exists) {
+        console.log('[useSources] Source already exists, skipping:', source.name)
+        return prevSources
+      }
 
-  const updateSource = (id, updates) => {
-    const newSources = sources.map((s) => (s.id === id ? { ...s, ...updates } : s))
-    setSources(newSources)
-    persistSources(newSources)
-  }
+      const newSources = [...prevSources, source]
+      console.log('[useSources] Added source:', source.name, 'Total sources:', newSources.length)
+      persistSources(newSources)
+      return newSources
+    })
+  }, [])
 
-  const clearSources = () => {
+  const removeSource = useCallback((id) => {
+    setSources((prevSources) => {
+      const newSources = prevSources.filter((s) => s.id !== id)
+      persistSources(newSources)
+      return newSources
+    })
+  }, [])
+
+  const updateSource = useCallback((id, updates) => {
+    setSources((prevSources) => {
+      const newSources = prevSources.map((s) => (s.id === id ? { ...s, ...updates } : s))
+      persistSources(newSources)
+      return newSources
+    })
+  }, [])
+
+  const clearSources = useCallback(() => {
     setSources([])
     localStorage.removeItem(STORAGE_KEY)
-  }
+  }, [])
 
   return {
     sources,
-    loading,
-    error,
     addSource,
     removeSource,
     updateSource,

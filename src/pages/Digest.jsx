@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { DigestView } from '../components/DigestView'
 import { useSources } from '../hooks/useSources'
 import { apiClient } from '../utils/api'
